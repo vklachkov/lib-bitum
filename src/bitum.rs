@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub struct BitPosition {
     byte: usize,
@@ -44,14 +43,16 @@ pub trait BitumExtract {
     }
 
     fn extract_low_bits(byte: u8, bit: usize) -> u8 {
-        let hmask = (1u16 << bit) - 1;
-        let hvbits = byte & hmask as u8;
+        let hmask = (1 << bit) - 1;
+        let hvbits = byte & hmask;
         let hrbits = hvbits;
 
         hrbits
     }
 
-    fn extract<const T: usize>(data: &[u8; T], at: &BitPosition) -> Self;
+    fn extract<const N: usize>(data: &[u8; N], at: &BitPosition) -> Self;
+
+    fn extract_bits<const N: usize>(data: &[u8; N], at: &BitPosition, count: usize) -> Self;
 }
 
 macro_rules! number_extract_gen {
@@ -67,7 +68,9 @@ macro_rules! number_extract_gen {
                     <$t>::from_le_bytes(bytes)
                 } else {
                     /*
-                    Bytes:
+                    Extract from non rounded positon
+
+                    Example bytes:
                     00110001 10001110 01001101 01111001
         
                     Simple example. One byte
@@ -137,6 +140,13 @@ macro_rules! number_extract_gen {
 
                     (start_bits << 0) | (middle_bits << middle_part_offset) | (finish_bits << finish_part_offset)
                 }
+            }
+        
+            fn extract_bits<const N: usize>(data: &[u8; N], at: &BitPosition, count: usize) -> Self {
+              assert!(count > Self::BITS as usize);
+
+              // TODO: Optimize, if bits significantly smaller than the bit in the type
+              Self::extract(data, at) & ((1 << at.bit) - 1) 
             }
         }        
     };
