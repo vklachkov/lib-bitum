@@ -1,80 +1,45 @@
-#[derive(Debug)]
-pub struct BitPosition {
-    byte: usize,
-    bit: usize,
+use crate::bit_pos::BitPosition;
+use crate::des::*;
+
+fn extract_high_bits(byte: u8, bit: usize) -> u8 {
+    let lmask = !((1 << bit) - 1);
+    let lvbits = byte & lmask;
+    let lrbits = lvbits >> bit;
+
+    lrbits
 }
 
-impl BitPosition {
-    pub fn new(byte: usize, bit: usize) -> Self {
-        BitPosition { byte, bit }
-    }
+fn extract_low_bits(byte: u8, bit: usize) -> u8 {
+    let hmask = (1 << bit) - 1;
+    let hvbits = byte & hmask;
+    let hrbits = hvbits;
 
-    pub fn bits(&self) -> usize {
-        self.byte * 8 + self.bit
-    }
-
-    pub fn is_round(&self) -> bool {
-        self.bit == 0
-    }
-
-    pub fn round_up(&self) -> Self {
-        BitPosition::new(
-            if self.bit != 0 {
-                self.byte + 1
-            } else {
-                self.byte
-            },
-            0,
-        )
-    }
-
-    pub fn round_down(&self) -> Self {
-        BitPosition::new(self.byte, 0)
-    }
-}
-
-pub trait BitumExtract {
-    fn extract_high_bits(byte: u8, bit: usize) -> u8 {
-        let lmask = !((1 << bit) - 1);
-        let lvbits = byte & lmask;
-        let lrbits = lvbits >> bit;
-
-        lrbits
-    }
-
-    fn extract_low_bits(byte: u8, bit: usize) -> u8 {
-        let hmask = (1 << bit) - 1;
-        let hvbits = byte & hmask;
-        let hrbits = hvbits;
-
-        hrbits
-    }
-
-    fn extract<const N: usize>(data: &[u8; N], at: &BitPosition) -> Self;
-
-    fn extract_bits<const N: usize>(data: &[u8; N], at: &BitPosition, count: usize) -> Self;
+    hrbits
 }
 
 macro_rules! number_extract_gen {
     ($t:ty) => {
-        impl BitumExtract for $t {
-            fn extract<const N: usize>(data: &[u8; N], at: &BitPosition) -> Self {
+        impl BitumDeserializeOwned for $t {
+            fn deserialize_at<const N: usize>(
+                data: &[u8; N],
+                pos: BitPosition,
+            ) -> (Self, BitPosition) {
                 const BYTES: usize = (<$t>::BITS / 8) as usize;
-        
-                if at.is_round() {
-                    let start_index = at.byte;
+
+                if pos.is_round() {
+                    let start_index = pos.byte;
                     let end_index = start_index + BYTES as usize;
                     let bytes: [u8; BYTES] = data[start_index..end_index].try_into().unwrap();
-                    <$t>::from_le_bytes(bytes)
+                    (<$t>::from_le_bytes(bytes), pos.inc_bytes(BYTES))
                 } else {
                     /*
                     Extract from non rounded positon
 
                     Example bytes:
                     00110001 10001110 01001101 01111001
-        
+
                     Simple example. One byte
-        
+
                     Position is 1.5:
                     00110001 10001110 01001101 01111001
                                   ^__ ____^
@@ -90,13 +55,13 @@ macro_rules! number_extract_gen {
                       (8 - 5) + ((BYTES - 1) * 8) = 8 - 5 + 0 * 8 = 3
                     4. Glue the byte:
                       (0b110) | (0b01001 << 3)
-        
+
                     Hard example. Two byte
-        
+
                     Position is 0.2:
                     00110001 10001110 01001101 01111001
                       ^_____ ________ _^
-        
+
                     Steps:
                     1. Extract first part:
                       1a. Get byte at 0, 0b00110001
@@ -118,37 +83,55 @@ macro_rules! number_extract_gen {
                     6. Glue the byte:
                       (0b110001) | (middle_bytes << 6) | (0b01 << 14)
                     */
-        
-                    let start_byte = data[at.byte];
-                    let start_bits = Self::extract_high_bits(start_byte, at.bit) as $t;
-        
+
+                    let start_byte = data[pos.byte];
+                    let start_bits = extract_high_bits(start_byte, pos.bit) as $t;
+
                     let mut middle_bits: $t = 0;
                     for i in 0..BYTES - 1 {
-                        let middle_byte = data[at.round_up().byte + i] as $t;
+                        let middle_byte = data[pos.round_up().byte + i] as $t;
                         middle_bits |= middle_byte << (i * 8);
                     }
 
-                    let finish_byte = data[at.byte + BYTES];
-                    let finish_bits = Self::extract_low_bits(finish_byte, at.bit) as $t;
-        
-                    let middle_part_offset = (8 - at.bit);
-                    let finish_part_offset = (8 - at.bit) + ((BYTES - 1) * 8);
-        
+                    let finish_byte = data[pos.byte + BYTES];
+                    let finish_bits = extract_low_bits(finish_byte, pos.bit) as $t;
+
+                    let middle_part_offset = (8 - pos.bit);
+                    let finish_part_offset = (8 - pos.bit) + ((BYTES - 1) * 8);
+
                     //println!("Start = {:8b}", start_bits);
                     //println!("Middle = {:8b}", middle_bits);
                     //println!("Finish = {:8b}", finish_bits);
 
-                    (start_bits << 0) | (middle_bits << middle_part_offset) | (finish_bits << finish_part_offset)
+                    (
+                        (start_bits << 0)
+                            | (middle_bits << middle_part_offset)
+                            | (finish_bits << finish_part_offset),
+                        pos.inc_bytes(BYTES),
+                    )
                 }
             }
-        
-            fn extract_bits<const N: usize>(data: &[u8; N], at: &BitPosition, count: usize) -> Self {
-              assert!(count > Self::BITS as usize);
+        }
 
-              // TODO: Optimize, if bits significantly smaller than the bit in the type
-              Self::extract(data, at) & ((1 << at.bit) - 1) 
+        impl BitumDeserializeSomeBitsOwned for $t {
+            fn deserialize_bits_at<const N: usize>(
+              data: &[u8; N],
+              count: usize,
+              pos: BitPosition,
+            ) -> (Self, BitPosition) {
+                assert!(Self::BITS as usize > count);
+
+                // TODO: Optimize, if bits significantly smaller than the bit in the type
+
+                let start_pos = pos.clone();
+
+                let data = Self::deserialize_at(data, pos);
+                let result = data.0 & ((1 << count) - 1);
+                let pos = start_pos.inc_bits(count);
+
+                (result, pos)
             }
-        }        
+        }
     };
 }
 
@@ -156,3 +139,4 @@ number_extract_gen!(u8);
 number_extract_gen!(u16);
 number_extract_gen!(u32);
 number_extract_gen!(u64);
+number_extract_gen!(u128);
