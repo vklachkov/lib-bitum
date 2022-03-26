@@ -137,3 +137,14 @@ fn serialize_u32_fractional_position() {
         }
     }
 }
+
+#[test]
+fn serialize_slice_dummy() {
+    let mut data = [0u8; 64];
+    let slice = [12000u16; 16];
+
+    slice.serialize(&mut data);
+
+    println!("{}", 46 << 8 | 224);
+    println!("{:?}", &data);
+}
