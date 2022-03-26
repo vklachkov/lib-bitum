@@ -1,21 +1,6 @@
 use crate::bit_pos::BitPosition;
 use crate::des::*;
-
-fn extract_high_bits(byte: u8, bit: usize) -> u8 {
-    let lmask = !((1 << bit) - 1);
-    let lvbits = byte & lmask;
-    let lrbits = lvbits >> bit;
-
-    lrbits
-}
-
-fn extract_low_bits(byte: u8, bit: usize) -> u8 {
-    let hmask = (1 << bit) - 1;
-    let hvbits = byte & hmask;
-    let hrbits = hvbits;
-
-    hrbits
-}
+use crate::util::*;
 
 macro_rules! number_extract_gen {
     ($t:ty) => {
@@ -104,7 +89,7 @@ macro_rules! number_extract_gen {
                     //println!("Finish = {:8b}", finish_bits);
 
                     (
-                        (start_bits << 0)
+                        start_bits
                             | (middle_bits << middle_part_offset)
                             | (finish_bits << finish_part_offset),
                         pos.inc_bytes(BYTES),
