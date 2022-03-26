@@ -1,7 +1,4 @@
 use std::path::Path;
-
-use bitum::bit_pos::BitPosition;
-use bitum::des::BitumDeserializeOwned;
 use darling::{ast::Data, FromDeriveInput, FromField};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens, quote_spanned};
