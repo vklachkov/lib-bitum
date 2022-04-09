@@ -42,7 +42,9 @@ macro_rules! gen {
                 count: usize,
                 pos: BitPosition,
             ) -> BitPosition {
-                todo!()
+                let mask = (1 as $t << count) - 1;
+                let discarded_bits_count = <$t>::BITS as usize - count;
+                (self & mask).serialize_into(data, pos).sub_bits(discarded_bits_count)
             }
         }
     };
