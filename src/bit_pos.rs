@@ -1,4 +1,6 @@
-#[derive(Debug, Clone, Copy)]
+use std::cmp::{min, max};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BitPosition {
     pub byte: usize,
     pub bit: usize,
@@ -41,7 +43,16 @@ impl BitPosition {
     }
 
     pub fn inc_bits(&self, bits: usize) -> Self {
-        let total_bits = self.bit + bits;
-        BitPosition::new(self.byte + (total_bits / 8), total_bits % 8)
+        let bits = self.bit + bits;
+        BitPosition::new(self.byte + (bits / 8), bits % 8)
+    }
+
+    pub fn sub_bytes(&self, bytes: usize) -> Self {
+        BitPosition::new(self.byte - bytes, self.bit)
+    }
+
+    pub fn sub_bits(&self, bits: usize) -> Self {
+        let result_bits = self.bits() - bits;
+        BitPosition::new(result_bits / 8, result_bits % 8)
     }
 }
