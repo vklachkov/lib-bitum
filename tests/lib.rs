@@ -1,7 +1,5 @@
 #![feature(generic_arg_infer)]
 
-mod ser;
-
 use bitum::{bit_pos::BitPosition, ser::*};
 
 #[test]
