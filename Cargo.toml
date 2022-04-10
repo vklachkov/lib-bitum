@@ -1,6 +1,6 @@
 [package]
 name = "bitum"
-version = "0.5.2"
+version = "0.6.0"
 authors = ["Valery Klachkov <zgdump@gmail.com>"]
 license = "Apache-2.0"
 description = "Binary structures serialization and deserialization library."
@@ -9,7 +9,7 @@ readme = "README.md"
 edition = "2021"
 
 [dependencies]
-bitum-derive = { version = "0.1.0", path = "derive" }
+bitum-derive = { version = "0.2.0", path = "derive" }
 
 [dev-dependencies]
 
