@@ -1,8 +1,12 @@
 mod des;
 mod ser;
-mod crc;
+mod crc8;
+mod crc16;
+mod crc_ctor;
 
-use crc::CrcCtorReceiver;
+use crc_ctor::CrcCtorReceiver;
+use crc8::Crc8Receiver;
+use crc16::Crc16Receiver;
 use darling::FromDeriveInput;
 use des::DeserializeReceiver;
 use quote::quote;
@@ -28,6 +32,22 @@ pub fn derive_serialize(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 #[proc_macro_derive(BitumCrcConstructor, attributes(field_names))]
 pub fn derive_crc_ctor(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     CrcCtorReceiver::from_derive_input(&parse_macro_input!(input as DeriveInput))
+        .map(|receiver| quote!(#receiver))
+        .unwrap_or_else(|err| err.write_errors())
+        .into()
+}
+
+#[proc_macro_derive(BitumCrc8, attributes(field_names))]
+pub fn derive_crc8(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    Crc8Receiver::from_derive_input(&parse_macro_input!(input as DeriveInput))
+        .map(|receiver| quote!(#receiver))
+        .unwrap_or_else(|err| err.write_errors())
+        .into()
+}
+
+#[proc_macro_derive(BitumCrc16, attributes(field_names))]
+pub fn derive_crc16(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    Crc16Receiver::from_derive_input(&parse_macro_input!(input as DeriveInput))
         .map(|receiver| quote!(#receiver))
         .unwrap_or_else(|err| err.write_errors())
         .into()

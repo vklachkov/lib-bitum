@@ -1,5 +1,6 @@
 pub mod bit_pos;
 pub mod bits;
+pub mod crc;
 pub mod des;
 pub mod des_bool;
 pub mod des_num;
