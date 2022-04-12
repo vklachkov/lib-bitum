@@ -5,12 +5,13 @@ use std::fmt::Debug;
 use std::ops::Deref;
 
 pub struct Bits<T, const SIZE: usize = 1> {
+    pub size: usize,
     value: T,
 }
 
 impl<T, const SIZE: usize> Bits<T, SIZE> {
     pub fn new(value: T) -> Self {
-        Bits { value }
+        Bits { size: SIZE, value: value, }
     }
 }
 
@@ -39,7 +40,7 @@ impl<T, const SIZE: usize> Eq for Bits<T, SIZE> where T: Eq {}
 impl<T: BitumDeserializeSomeBitsOwned, const SIZE: usize> BitumDeserializeOwned for Bits<T, SIZE> {
     fn deserialize_at<const N: usize>(data: &[u8; N], pos: BitPosition) -> (Self, BitPosition) {
         let result = T::deserialize_bits_at(data, SIZE, pos);
-        (Bits { value: result.0 }, result.1)
+        (Bits { size: SIZE, value: result.0, }, result.1)
     }
 }
 
