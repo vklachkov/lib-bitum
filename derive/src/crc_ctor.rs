@@ -32,7 +32,7 @@ impl ToTokens for CrcCtorReceiver {
         let params: Vec<TokenStream> = fields
             .iter()
             .map(|(ident, t)| {
-                if ident.to_string() == "crc" {
+                if ident.to_string().starts_with("crc") {
                     quote_spanned! { ident.span() =>
 
                     }
@@ -44,14 +44,49 @@ impl ToTokens for CrcCtorReceiver {
             })
             .collect();
 
+        enum CrcType { CRC8, CRC16 }
+
+        let crc_field_name = fields.iter().find(|(ident, _)| { ident.to_string().starts_with("crc") });
+        let crc_type = match crc_field_name {
+            Some((i, _)) => {
+                match i.to_string().as_str() {
+                    "crc8" => CrcType::CRC8,
+                    "crc16" => CrcType::CRC16,
+                    _ => {
+                        //println!("UUU {}", i.to_string().as_str());
+                        //CrcType::CRC8
+                        panic!("Invalid crc field name")
+                    }
+                }
+            },
+            None => {
+                //println!("UUU");
+                //CrcType::CRC8
+                panic!("Crc not found")
+            },
+        };
+
         let crc_calc: Vec<TokenStream> = fields
             .iter()
             .map(|(ident, t)| {
-                if ident.to_string() == "crc" {
+                if ident.to_string().starts_with("crc") {
                     quote_spanned! { ident.span() =>
                     
                     }
+                } else if ident.to_string() == "flags" {
+                    quote_spanned! { ident.span() =>
+                        crc = #ident.crc(crc, table);
+                    }
                 } else {
+                    let crc_calc = match crc_type {
+                        CrcType::CRC8 => quote_spanned! { ident.span() =>
+                            table[(crc ^ b) as usize]
+                        },
+                        CrcType::CRC16 => quote_spanned! { ident.span() =>
+                            (crc << 8) ^ table[((crc >> 8) ^ (*b as u16)) as usize]
+                        },
+                    };
+                    
                     quote_spanned! { ident.span() =>
                         {
                             let bytes = unsafe {
@@ -61,7 +96,7 @@ impl ToTokens for CrcCtorReceiver {
                             };
 
                             for b in bytes {
-                                crc = crc_table[(crc ^ b) as usize];
+                                crc = #crc_calc;
                             }
                         }
                     }
@@ -71,8 +106,8 @@ impl ToTokens for CrcCtorReceiver {
 
         let args: Vec<TokenStream> = fields
             .iter()
-            .map(|(ident, t)| {
-                if ident.to_string() == "crc" {
+            .map(|(ident, _)| {
+                if ident.to_string().starts_with("crc") {
                     quote_spanned! { ident.span() =>
                     
                     }
@@ -84,21 +119,29 @@ impl ToTokens for CrcCtorReceiver {
             })
             .collect();
 
+        let crc_t = match crc_type {
+            CrcType::CRC8 => quote_spanned! { ident.span() => u8 },
+            CrcType::CRC16 => quote_spanned! { ident.span() => u16 },
+        };
+
+        let crc_n = match crc_type {
+            CrcType::CRC8 => quote_spanned! { ident.span() => crc8 },
+            CrcType::CRC16 => quote_spanned! { ident.span() => crc16 },
+        };
+
         tokens.extend(quote! {
             #[automatically_derived]
             impl #impl_generics #ident #ty_generics #where_clause {
-                fn new_with_checksum(#(#params)* crc_table: &[u8; 256]) -> Self {
-                    let crc = {
-                        let mut crc: u8 = 0xFF;
-
+                fn new_with_checksum(#(#params)* table: &[#crc_t; 256]) -> Self {
+                    let #crc_n = {
+                        let mut crc: #crc_t = #crc_t::MAX;
                         #(#crc_calc)*
-                        
                         crc
                     };
 
                     Self {
                         #(#args)*
-                        crc    
+                        #crc_n
                     }
                 }
             }
