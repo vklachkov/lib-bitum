@@ -132,7 +132,7 @@ impl ToTokens for CrcCtorReceiver {
         tokens.extend(quote! {
             #[automatically_derived]
             impl #impl_generics #ident #ty_generics #where_clause {
-                fn new_with_checksum(#(#params)* table: &[#crc_t; 256]) -> Self {
+                pub fn new_with_checksum(#(#params)* table: &[#crc_t; 256]) -> Self {
                     let #crc_n = {
                         let mut crc: #crc_t = #crc_t::MAX;
                         #(#crc_calc)*

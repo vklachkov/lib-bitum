@@ -1,6 +1,6 @@
 [package]
 name = "bitum-derive"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Valery Klachkov <zgdump@gmail.com>"]
 license = "Apache-2.0"
 description = "Derive macros for bitum."
