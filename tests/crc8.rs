@@ -1,4 +1,15 @@
+use bitum::bits::Bits;
+use bitum::crc::BitumCrc8;
 use bitum_derive::BitumCrcConstructor;
+
+#[derive(bitum_derive::BitumCrc8)]
+struct FlagsTest {
+    flg1: Bits<u8, 2>,
+    flg2: Bits<bool>,
+    flg3: Bits<u8, 2>,
+    flg4: Bits<u8, 1>,
+    flg5: Bits<u8, 2>,
+}
 
 #[derive(BitumCrcConstructor)]
 struct CrcTest {
@@ -6,8 +17,9 @@ struct CrcTest {
     f2: u16,
     f3: u32,
     f4: u64,
+    flags: FlagsTest,
     f5: u128,
-    crc: u8
+    crc8: u8,
 }
 
 #[repr(packed(1))]
@@ -16,12 +28,13 @@ struct CrcTestUnaligned {
     f2: u16,
     f3: u32,
     f4: u64,
-    f5: u128
+    flags: u8,
+    f5: u128,
 }
 
 #[test]
 fn crc_check() {
-    let table = [
+    let table: [u8; 256] = [
         0x00, 0x31, 0x62, 0x53, 0xC4, 0xF5, 0xA6, 0x97,
         0xB9, 0x88, 0xDB, 0xEA, 0x7D, 0x4C, 0x1F, 0x2E,
         0x43, 0x72, 0x21, 0x10, 0x87, 0xB6, 0xE5, 0xD4,
@@ -56,14 +69,23 @@ fn crc_check() {
         0x3B, 0x0A, 0x59, 0x68, 0xFF, 0xCE, 0x9D, 0xAC
     ];
 
-    let test_struct = CrcTest::new_with_checksum(1, 1, 1, 1, 1, &table);
+    let flags = FlagsTest {
+        flg1: Bits::new(0),
+        flg2: Bits::new(false),
+        flg3: Bits::new(0),
+        flg4: Bits::new(0),
+        flg5: Bits::new(0),
+    };
 
-    let test_struct2_crc = {
+    let test_struct = CrcTest::new_with_checksum(1, 1, 1, 1, flags, 1, &table);
+
+    let test_struct2_crc8 = {
         let test_struct2 = CrcTestUnaligned {
             f1: 1,
             f2: 1,
             f3: 1,
             f4: 1,
+            flags: 0,
             f5: 1,
         };
 
@@ -73,7 +95,7 @@ fn crc_check() {
             core::slice::from_raw_parts(ptr, len)
         };
 
-        let mut crc = 0xFF;
+        let mut crc = u8::MAX;
 
         for b in bytes {
             crc = table[(crc ^ b) as usize];
@@ -82,5 +104,5 @@ fn crc_check() {
         crc
     };
 
-    assert_eq!(test_struct.crc, test_struct2_crc);
+    assert_eq!(test_struct.crc8, test_struct2_crc8);
 }
