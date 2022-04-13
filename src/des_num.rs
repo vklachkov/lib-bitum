@@ -5,16 +5,13 @@ use crate::util::*;
 macro_rules! number_extract_gen {
     ($t:ty) => {
         impl BitumDeserializeOwned for $t {
-            fn deserialize_at<const N: usize>(
-                data: &[u8; N],
-                pos: BitPosition,
-            ) -> (Self, BitPosition) {
+            fn deserialize_at(buffer: &[u8], pos: BitPosition) -> (Self, BitPosition) {
                 const BYTES: usize = (<$t>::BITS / 8) as usize;
 
                 if pos.is_round() {
                     let start_index = pos.byte;
                     let end_index = start_index + BYTES as usize;
-                    let bytes: [u8; BYTES] = data[start_index..end_index].try_into().unwrap();
+                    let bytes: [u8; BYTES] = buffer[start_index..end_index].try_into().unwrap();
                     (<$t>::from_le_bytes(bytes), pos.inc_bytes(BYTES))
                 } else {
                     /*
@@ -69,16 +66,16 @@ macro_rules! number_extract_gen {
                       (0b110001) | (middle_bytes << 6) | (0b01 << 14)
                     */
 
-                    let start_byte = data[pos.byte];
+                    let start_byte = buffer[pos.byte];
                     let start_bits = extract_high_bits(start_byte, pos.bit) as $t;
 
                     let mut middle_bits: $t = 0;
                     for i in 0..BYTES - 1 {
-                        let middle_byte = data[pos.round_up().byte + i] as $t;
+                        let middle_byte = buffer[pos.round_up().byte + i] as $t;
                         middle_bits |= middle_byte << (i * 8);
                     }
 
-                    let finish_byte = data[pos.byte + BYTES];
+                    let finish_byte = buffer[pos.byte + BYTES];
                     let finish_bits = extract_low_bits(finish_byte, pos.bit) as $t;
 
                     let middle_part_offset = (8 - pos.bit);
@@ -99,10 +96,10 @@ macro_rules! number_extract_gen {
         }
 
         impl BitumDeserializeSomeBitsOwned for $t {
-            fn deserialize_bits_at<const N: usize>(
-              data: &[u8; N],
-              count: usize,
-              pos: BitPosition,
+            fn deserialize_bits_at(
+                buffer: &[u8],
+                count: usize,
+                pos: BitPosition,
             ) -> (Self, BitPosition) {
                 assert!(Self::BITS as usize > count);
 
@@ -110,7 +107,7 @@ macro_rules! number_extract_gen {
 
                 let start_pos = pos.clone();
 
-                let data = Self::deserialize_at(data, pos);
+                let data = Self::deserialize_at(buffer, pos);
                 let result = data.0 & ((1 << count) - 1);
                 let pos = start_pos.inc_bits(count);
 

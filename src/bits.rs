@@ -11,7 +11,10 @@ pub struct Bits<T, const SIZE: usize = 1> {
 
 impl<T, const SIZE: usize> Bits<T, SIZE> {
     pub fn new(value: T) -> Self {
-        Bits { size: SIZE, value: value, }
+        Bits {
+            size: SIZE,
+            value: value,
+        }
     }
 }
 
@@ -38,14 +41,20 @@ impl<T: PartialEq, const SIZE: usize> PartialEq for Bits<T, SIZE> {
 impl<T, const SIZE: usize> Eq for Bits<T, SIZE> where T: Eq {}
 
 impl<T: BitumDeserializeSomeBitsOwned, const SIZE: usize> BitumDeserializeOwned for Bits<T, SIZE> {
-    fn deserialize_at<const N: usize>(data: &[u8; N], pos: BitPosition) -> (Self, BitPosition) {
-        let result = T::deserialize_bits_at(data, SIZE, pos);
-        (Bits { size: SIZE, value: result.0, }, result.1)
+    fn deserialize_at(buffer: &[u8], pos: BitPosition) -> (Self, BitPosition) {
+        let result = T::deserialize_bits_at(buffer, SIZE, pos);
+        (
+            Bits {
+                size: SIZE,
+                value: result.0,
+            },
+            result.1,
+        )
     }
 }
 
 impl<T: BitumSerializeSomeBitsOwned, const SIZE: usize> BitumSerializeOwned for Bits<T, SIZE> {
-    fn serialize_into<const N: usize>(&self, data: &mut [u8; N], pos: BitPosition) -> BitPosition {
-        self.value.serialize_bits_into(data, SIZE, pos)
+    fn serialize_into(&self, buffer: &mut [u8], pos: BitPosition) -> BitPosition {
+        self.value.serialize_bits_into(buffer, SIZE, pos)
     }
 }

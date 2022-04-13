@@ -38,7 +38,7 @@ impl ToTokens for SerializeReceiver {
                         if t == "Option" {
                             quote_spanned! { ident.span() =>
                                 let pos = if *flags.#ident {
-                                    let pos = self.#ident.serialize_into(data, pos);
+                                    let pos = self.#ident.serialize_into(buffer, pos);
                                     pos
                                 } else {
                                     pos
@@ -46,7 +46,7 @@ impl ToTokens for SerializeReceiver {
                             }
                         } else {
                             quote_spanned! { ident.span() =>
-                                let pos = self.#ident.serialize_into(data, pos);
+                                let pos = self.#ident.serialize_into(buffer, pos);
                             }
                         }
                     },
@@ -65,7 +65,7 @@ impl ToTokens for SerializeReceiver {
         tokens.extend(quote! {
             #[automatically_derived]
             impl #impl_generics BitumSerializeOwned for #ident #ty_generics #where_clause {
-                fn serialize_into<const N: usize>(&self, data: &mut [u8; N], pos: BitPosition) -> BitPosition {                    
+                fn serialize_into(&self, buffer: &mut [u8], pos: BitPosition) -> BitPosition {                    
                     #(#fields_serialize)*
 
                     pos

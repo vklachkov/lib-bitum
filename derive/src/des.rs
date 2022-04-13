@@ -40,7 +40,7 @@ impl ToTokens for DeserializeReceiver {
 
                             quote_spanned! { ident.span() =>
                                 let (#ident, pos) = if *flags.#ident {
-                                    let r = deserialize_at::<#t, _>(data, pos);
+                                    let r = deserialize_at::<#t>(buffer, pos);
                                     (Some(r.0), r.1)
                                 } else {
                                     (None, pos)
@@ -48,7 +48,7 @@ impl ToTokens for DeserializeReceiver {
                             }
                         } else {
                             quote_spanned! { ident.span() =>
-                                let (#ident, pos) = deserialize_at::<#ftype, _>(data, pos);
+                                let (#ident, pos) = deserialize_at::<#ftype>(buffer, pos);
                             }
                         }
                     },
@@ -67,11 +67,11 @@ impl ToTokens for DeserializeReceiver {
         tokens.extend(quote! {
             #[automatically_derived]
             impl #impl_generics BitumDeserializeOwned for #ident #ty_generics #where_clause {
-                fn deserialize_at<const N: usize>(data: &[u8; N], pos: BitPosition) -> (Self, BitPosition) {                    
-                    fn deserialize_at<T, const N: usize>(data: &[u8; N], pos: BitPosition) -> (T, BitPosition)
+                fn deserialize_at(buffer: &[u8], pos: BitPosition) -> (Self, BitPosition) {                    
+                    fn deserialize_at<T>(buffer: &[u8], pos: BitPosition) -> (T, BitPosition)
                         where T: BitumDeserializeOwned 
                     {
-                        T::deserialize_at(data, pos)
+                        T::deserialize_at(buffer, pos)
                     }
 
                     #(#fields_extract)*

@@ -5,17 +5,17 @@ use crate::util::*;
 macro_rules! gen {
     ($t:ty) => {
         impl BitumSerializeOwned for $t {
-            fn serialize_into<const N: usize>(&self, data: &mut [u8; N], pos: BitPosition) -> BitPosition {
+            fn serialize_into(&self, data: &mut [u8], pos: BitPosition) -> BitPosition {
                 let mut pos = pos;
-        
+
                 let self_bytes = self.to_le_bytes();
-        
+
                 if pos.is_round() {
                     for b in self_bytes {
                         data[pos.byte] = b;
                         pos = pos.inc_bytes(1);
                     }
-        
+
                     pos
                 } else {
                     for b in self_bytes {
@@ -23,22 +23,22 @@ macro_rules! gen {
 
                         let high = extract_high_bits(b, bit);
                         let low = extract_low_bits(b, bit);
-        
+
                         data[pos.byte + 0] |= low << pos.bit;
                         data[pos.byte + 1] |= high;
-        
+
                         pos = pos.inc_bytes(1);
                     }
-        
+
                     pos
                 }
             }
         }
-        
+
         impl BitumSerializeSomeBitsOwned for $t {
-            fn serialize_bits_into<const N: usize>(
+            fn serialize_bits_into(
                 &self,
-                data: &mut [u8; N],
+                data: &mut [u8],
                 count: usize,
                 pos: BitPosition,
             ) -> BitPosition {
