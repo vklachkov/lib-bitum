@@ -37,7 +37,7 @@ impl ToTokens for SerializeReceiver {
                         let t = type_path.path.segments.last().unwrap().ident.to_string();
                         if t == "Option" {
                             quote_spanned! { ident.span() =>
-                                let pos = if *flags.#ident {
+                                let pos = if *self.flags.#ident {
                                     let pos = self.#ident.serialize_into(buffer, pos);
                                     pos
                                 } else {
