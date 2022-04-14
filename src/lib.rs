@@ -8,5 +8,6 @@ pub mod des_slice;
 pub mod ser;
 pub mod ser_bool;
 pub mod ser_num;
+pub mod ser_option;
 pub mod ser_slice;
 pub mod util;
